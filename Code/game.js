@@ -124,6 +124,7 @@ async function showDoneButton() {
     document.getElementById("check_button").style.display = "none";
     showDownHandsP1();
     document.getElementById("done_button").style.display = "inline";
+    document.getElementById("p2_explain").innerHTML = "化合物を精製してください";
 }
 
 
@@ -135,7 +136,7 @@ function PressBetButton(who) {
         document.getElementById("p1_explain").innerHTML = `${amountMoney}チップ ベットしました`;
         if (turn === "p2") actionType2();
         updateTips();
-    } else if (who=="p2" && turn=="p2" && time=="game"){
+    } else if (who=="p2" && turn=="p2" && time=="game" && p2_tip>=amountMoney){
         P2AllMoney += amountMoney;
         p2_tip -= amountMoney;
         document.getElementById("p2_explain").innerHTML = `${amountMoney}チップ ベットしました`;
@@ -150,7 +151,7 @@ function PressCallButton(who) {
         document.getElementById("p1_explain").innerHTML = `${P2AllMoney - P1AllMoney}チップ コールしました`;
         P1AllMoney += P2AllMoney - P1AllMoney;
         updateTips();
-    } else if (who=="p2" && turn=="p2" && time=="game"){
+    } else if (who=="p2" && turn=="p2" && time=="game" && p2_tip>=amountMoney){
         p2_tip -= P1AllMoney - P2AllMoney;
         document.getElementById("p2_explain").innerHTML = `${P1AllMoney - P2AllMoney}チップ コールしました`;
         P2AllMoney += P1AllMoney - P2AllMoney;
@@ -164,7 +165,7 @@ function PressRaiseButton(who) {
         p1_tip -= amountMoney*2;
         document.getElementById("p1_explain").innerHTML = `${amountMoney*2}チップ レイズしました`;
         updateTips();
-    } else if (who=="p2" && turn=="p2" && time=="game"){
+    } else if (who=="p2" && turn=="p2" && time=="game" && p2_tip>=amountMoney*2){
         P2AllMoney += amountMoney*2;
         p2_tip -= amountMoney*2;
         document.getElementById("p2_explain").innerHTML = `${amountMoney*2}チップ レイズしました`;
@@ -183,6 +184,7 @@ function PressCheckButton(who) {
     };
     if (P1AllMoney == P2AllMoney && P1AllMoney!=0) {
         time="exchange";
+        document.getElementById("p2_explain").innerHTML = "交換するカードをタップしてください";
         ["bet_button", "call_button", "raise_button", "fold_button", "check_button"].forEach(id => document.getElementById(id).style.display = "none");
     }
 }
@@ -214,6 +216,7 @@ function PressFoldButton(who) {
         nextButton.addEventListener("click", function() {
             returnScreen();
             numTurn = 1;
+            setItem("p2_tip");
             this.style.display = "none";
         })
     }
@@ -319,6 +322,21 @@ async function searchMaterials(components) {
         return true;
     });
 }
+async function searchMaterial(components) {
+    return materials.find(material => {
+        for (const element in components) {
+            if (!material.d[element] || material.d[element] !== components[element]) {
+                return false;
+            }
+        }
+        for (const element in material.d) {
+            if (!components[element]) {
+                return false;
+            }
+        }
+        return true;
+    }) || materials[0];
+}
 function arrayToObj(array) {
     let result = {}
     array.forEach(item => {
@@ -348,10 +366,9 @@ function objToArray(obj) {
 
 //Press done_button
 document.getElementById("done_button").addEventListener("click", async function() {
-    createdMaterial = await searchMaterials(arrayToObj(p2_selected_card));
-    createdMaterial = createdMaterial.sort((a,b) => b.c - a.c);
+    createdMaterial = await searchMaterial(arrayToObj(p2_selected_card));
     document.getElementById("done_button").style.display = "none";
-    document.getElementById("p2_explain").innerHTML = `作成：${createdMaterial[0].a}`;
+    document.getElementById("p2_explain").innerHTML = `作成：${createdMaterial.a}`;
     var creatableMaterials = await searchMaterials(arrayToObj(p1_hand));
     var createMaterial = creatableMaterials.sort((a,b) => b.c - a.c)[0];
     let needs =  objToArray(createMaterial.d);
@@ -363,7 +380,7 @@ document.getElementById("done_button").addEventListener("click", async function(
         }
     });   
     document.getElementById("p1_explain").innerHTML = `作成：${createMaterial.a}`;
-    if (createMaterial.c > createdMaterial[0].c) {p1_tip+=P1AllMoney+P2AllMoney;} else if(createMaterial.c < createdMaterial[0].c) {p2_tip+=P1AllMoney+P2AllMoney;} else {p1_tip+=P1AllMoney;p2_tip+=P2AllMoney;};
+    if (createMaterial.c > createdMaterial.c) {p1_tip+=P1AllMoney+P2AllMoney;} else if(createMaterial.c < createdMaterial.c) {p2_tip+=P1AllMoney+P2AllMoney;} else {p1_tip+=P1AllMoney;p2_tip+=P2AllMoney;};
     //updateTips();
     const nextButton = document.getElementById("nextButton");
     nextButton.style.display = "inline";
@@ -379,6 +396,7 @@ document.getElementById("done_button").addEventListener("click", async function(
         nextButton.addEventListener("click", function() {
             returnScreen();
             numTurn = 1;
+            setItem("p2_tip");
             this.style.display = "none";
         })
     }
@@ -410,6 +428,7 @@ function resetGame() {
     p1_selected_card = [];
     p2_selected_card = [];
     p1_hand = []; p2_hand = [];
+    if (p1_tip<=0 || p2_tip<=0) {returnScreen();}
     randomHand();
     document.getElementById("p1_explain").innerHTML = "";
     document.getElementById("p2_explain").innerHTML = "";
@@ -434,9 +453,6 @@ document.addEventListener("DOMContentLoaded", async function() {
 async function saveWinSettings() {
     acceptNum = document.getElementById("winExcInput").value;
     acceptTurn = document.getElementById("winTurnInput").value;
-    compounds = document.getElementById("compoundsSelection").value;
-    let url = compounds=="url" ? document.getElementById("compoundsURL").value : compounds;
-    materials = await loadMaterials(url);
     closeWinSettings();
 }
 function openSetting() {
@@ -444,51 +460,6 @@ function openSetting() {
 }
 async function closeWinSettings() {
     document.getElementById("winSettingsModal").style.display = "none";
-}
-function showInputTag() {
-    document.getElementById("compoundsURL").style.display = "inline";
-}
-
-function First() {
-    time = "game";
-    while (P1AllMoney != P2AllMoney) {}
-        /*
-    let interval = setInterval(() => {
-        if (P1AllMoney !== P2AllMoney) {
-            if (turn === "p1") {
-                autoAction("p1");
-            } else {
-                autoAction("p2");
-            }
-        } else {
-            clearInterval(interval);
-            time = "exchange";
-            exchangeNum = 0;
-            turn = "p1";
-            document.getElementById("p1_explain").innerHTML = "カードを交換してください";
-        }
-    }, 500);
-    */
-    time="exchange";
-}
-
-function Second() {
-    time = "game";
-    let interval = setInterval(() => {
-        if (P1AllMoney !== P2AllMoney) {
-            if (turn === "p1") {
-                autoAction("p1");
-            } else {
-                autoAction("p2");
-            }
-        } else {
-            clearInterval(interval);
-            time = "make";
-            exchangeNum = acceptNum + 1; // 化合物選択フェーズへ
-            showDoneButton();
-        }
-    }, 1000);
-    time="make";
 }
 
 // 自動的に行動（例：コール or チェック）

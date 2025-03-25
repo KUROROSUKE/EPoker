@@ -38,18 +38,6 @@
     <div id="winSettingsModal">
         <label>exchange num: <input type="number" id="winExcInput" value="1" min="1"></label><br>
         <label>turn num: <input type="number" id="winTurnInput" value="10" min="1"></label><br>
-        <div style="padding:0 5% 0 0">
-            <label>compoundURL：
-            <select id="compoundsSelection" onchange="showInputTag()">
-                <option value="https://kurorosuke.github.io/compounds/compact.json">compact</option>
-                <option value="https://kurorosuke.github.io/compounds/standard.json" selected>standard</option>
-                <option value="https://kurorosuke.github.io/compounds/extended.json">extended</option>
-                <option value="url">URL</option>
-            </select><br>
-            <div></div>
-            <input type="url" id="compoundsURL" style="display:none; width:100%;padding:10px">
-            </label>
-        </div>
         <div style="display: flex; justify-content: space-between; padding: 5%;">
             <button onclick="saveWinSettings()" style="padding: 10px 20px; font-size: 1.2em; width: 45%;">適用</button>
             <button onclick="closeWinSettings()" style="padding: 10px 20px; font-size: 1.2em; width: 45%;">取消</button>
